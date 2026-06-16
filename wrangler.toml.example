@@ -1,0 +1,27 @@
+name = "omnigent-cloudflare"
+main = "src/index.js"
+compatibility_date = "2026-06-16"
+workers_dev = true
+
+# ── Custom Domain (optional) ──────────────────────────────────────────
+# Uncomment and update with your domain after adding DNS CNAME record
+# routes = [
+#   { pattern = "buildx.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# ── D1 Database ───────────────────────────────────────────────────────
+# Create with: wrangler d1 create omnigent-db
+# Then replace YOUR_DATABASE_ID_HERE with the output
+[[d1_databases]]
+binding = "DB"
+database_name = "omnigent-db"
+database_id = "YOUR_DATABASE_ID_HERE"
+
+# ── Static Assets (Web UI) ───────────────────────────────────────────
+[site]
+bucket = "./public"
+
+# ── Environment Variables ─────────────────────────────────────────────
+[vars]
+# SERVER_URL is auto-set by setup.sh or set manually after deploy
+# SERVER_URL = "https://your-worker.your-subdomain.workers.dev"

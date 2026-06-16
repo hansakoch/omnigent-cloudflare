@@ -1,0 +1,32 @@
+{
+  "name": "omnigent-cloudflare",
+  "version": "1.0.0",
+  "description": "Self-contained Omnigent server on Cloudflare Workers + D1",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "setup": "bash setup.sh"
+  },
+  "keywords": [
+    "omnigent",
+    "cloudflare",
+    "workers",
+    "d1",
+    "ai-agents",
+    "server"
+  ],
+  "author": "hansakoch",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hansakoch/omnigent-cloudflare.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hansakoch/omnigent-cloudflare/issues"
+  },
+  "homepage": "https://github.com/hansakoch/omnigent-cloudflare#readme",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

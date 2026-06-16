@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "setup": "bash setup.sh"
+    "setup": "bash setup.sh",
+    "preview": "wrangler dev"
   },
   "keywords": [
     "omnigent",
@@ -27,6 +28,6 @@
   },
   "homepage": "https://github.com/hansakoch/omnigent-cloudflare#readme",
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.100.0"
   }
 }

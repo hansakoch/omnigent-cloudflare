@@ -5,3 +5,7 @@ node_modules/
 .env
 .env.local
 wrangler.toml
+
+.dev.vars*
+!.dev.vars.example
+!.env.example

@@ -203,9 +203,11 @@
             <h2 id="chat-title">Session</h2>
             <span class="agent-badge" id="chat-agent"></span>
           </div>
-          <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <select id="assign-runner-select" onchange="assignRunner(this.value)" style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 8px; color: white; font-size: 12px;">
+              <option value="">No runner</option>
+            </select>
             <span class="status-dot" id="runner-dot"></span>
-            <span id="runner-status" style="font-size: 12px; color: #888;">No runner</span>
           </div>
         </div>
         <div class="chat-messages" id="messages">
@@ -365,6 +367,18 @@
       openSession(session.id);
     }
 
+    async function assignRunner(runnerId) {
+      if (!currentSession) return;
+      
+      await api(`/v1/sessions/${currentSession.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ runner_id: runnerId || null }),
+      });
+      
+      await refresh();
+      openSession(currentSession.id);
+    }
+
     async function openSession(id) {
       currentSession = await api(`/v1/sessions/${id}`);
       
@@ -375,14 +389,14 @@
       const agent = agents.find(a => a.id === currentSession.agent_id);
       document.getElementById('chat-agent').textContent = agent ? agent.name : currentSession.agent_id;
       
-      if (currentSession.runner_id) {
-        const runner = runners.find(r => r.runner_id === currentSession.runner_id);
-        document.getElementById('runner-dot').className = 'status-dot ' + (runner ? 'status-online' : 'status-offline');
-        document.getElementById('runner-status').textContent = runner ? 'Connected' : 'Disconnected';
-      } else {
-        document.getElementById('runner-dot').className = 'status-dot status-offline';
-        document.getElementById('runner-status').textContent = 'No runner assigned';
-      }
+      // Populate runner dropdown
+      const runnerSelect = document.getElementById('assign-runner-select');
+      runnerSelect.innerHTML = '<option value="">No runner</option>' + 
+        runners.map(r => `<option value="${r.runner_id}" ${currentSession.runner_id === r.runner_id ? 'selected' : ''}>${r.runner_id}</option>`).join('');
+      
+      // Update runner status
+      const runner = runners.find(r => r.runner_id === currentSession.runner_id);
+      document.getElementById('runner-dot').className = 'status-dot ' + (runner ? 'status-online' : 'status-offline');
       
       const messages = await api(`/v1/sessions/${id}/messages`);
       renderMessages(messages);

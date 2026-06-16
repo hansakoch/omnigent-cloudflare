@@ -411,9 +411,9 @@ async function createSessionHandler(req, env) {
   const now = new Date().toISOString();
 
   await env.DB.prepare(
-    `INSERT INTO conversations (id, agent_id, title, workspace, status, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`
-  ).bind(sessionId, body.agent_id, body.title || null, body.workspace || null, body.created_by || null, now, now).run();
+    `INSERT INTO conversations (id, agent_id, title, workspace, status, runner_id, created_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`
+  ).bind(sessionId, body.agent_id, body.title || null, body.workspace || null, body.runner_id || null, body.created_by || null, now, now).run();
 
   const session = await env.DB.prepare("SELECT * FROM conversations WHERE id = ?")
     .bind(sessionId).first();
@@ -473,6 +473,47 @@ async function deleteSessionHandler(req, env) {
   await env.DB.prepare("DELETE FROM conversations WHERE id = ?")
     .bind(req.params.id).run();
   return new Response(JSON.stringify({ ok: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function updateSessionHandler(req, env) {
+  const body = await req.json();
+  const now = new Date().toISOString();
+  const updates = [];
+  const params = [];
+
+  if (body.runner_id !== undefined) {
+    updates.push("runner_id = ?");
+    params.push(body.runner_id);
+  }
+  if (body.status !== undefined) {
+    updates.push("status = ?");
+    params.push(body.status);
+  }
+  if (body.title !== undefined) {
+    updates.push("title = ?");
+    params.push(body.title);
+  }
+
+  if (updates.length === 0) {
+    return new Response(JSON.stringify({ error: "No updates provided" }), {
+      status: 400, headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  updates.push("updated_at = ?");
+  params.push(now);
+  params.push(req.params.id);
+
+  await env.DB.prepare(
+    `UPDATE conversations SET ${updates.join(", ")} WHERE id = ?`
+  ).bind(...params).run();
+
+  const session = await env.DB.prepare("SELECT * FROM conversations WHERE id = ?")
+    .bind(req.params.id).first();
+
+  return new Response(JSON.stringify(session), {
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -655,6 +696,7 @@ function buildRouter() {
   // Sessions - detail routes BEFORE list routes
   router.addRoute("GET", "/v1/sessions/{id}", getSessionHandler);
   router.addRoute("DELETE", "/v1/sessions/{id}", deleteSessionHandler);
+  router.addRoute("PATCH", "/v1/sessions/{id}", updateSessionHandler);
   router.addRoute("POST", "/v1/sessions/{id}/messages", postMessageHandler);
   router.addRoute("GET", "/v1/sessions/{id}/messages", listMessagesHandler);
   router.addRoute("POST", "/v1/sessions", createSessionHandler);

@@ -75,14 +75,14 @@ export class Tunnel {
     this.hello = null;
     this.connectedAt = null;
     this.lastFrameAt = null;
-    this.outboundQueue = [];
   }
 
   async fetch(request) {
     const url = new URL(request.url);
 
     // WebSocket upgrade for runner tunnel
-    if (url.pathname === "/ws") {
+    // Handle both /ws and /v1/hosts/{id}/tunnel paths
+    if (url.pathname === "/ws" || url.pathname.endsWith("/tunnel")) {
       const upgradeHeader = request.headers.get("Upgrade");
       if (upgradeHeader !== "websocket") {
         return new Response("Expected WebSocket", { status: 426 });
@@ -91,7 +91,11 @@ export class Tunnel {
       const pair = new WebSocketPair();
       const [client, server] = [pair[0], pair[1]];
 
-      this.handleWebSocket(server, request);
+      // Extract runner_id from URL
+      const pathParts = url.pathname.split("/");
+      const runnerId = pathParts[3] || url.searchParams.get("runner_id") || `runner_${crypto.randomUUID().slice(0, 8)}`;
+
+      this.handleWebSocket(server, request, runnerId);
 
       return new Response(null, { status: 101, webSocket: client });
     }
@@ -118,16 +122,15 @@ export class Tunnel {
     return new Response("Not found", { status: 404 });
   }
 
-  async handleWebSocket(ws, request) {
+  async handleWebSocket(ws, request, runnerId) {
     ws.accept();
     this.ws = ws;
     this.connectedAt = new Date().toISOString();
     this.lastFrameAt = Date.now();
 
-    // Extract runner_id from URL
-    const url = new URL(request.url);
-    this.runnerId = url.searchParams.get("runner_id") || `runner_${crypto.randomUUID().slice(0, 8)}`;
-    this.owner = url.searchParams.get("owner") || "local";
+    // Use provided runner_id or generate one
+    this.runnerId = runnerId;
+    this.owner = "local";
 
     // Start ping loop
     const pingInterval = setInterval(() => {
@@ -622,15 +625,14 @@ export default {
     }
 
     // Runner tunnel WebSocket - route to Durable Object
-    if (url.pathname.startsWith("/v1/runners/") && url.pathname.endsWith("/tunnel")) {
-      const runnerId = url.pathname.split("/")[3];
+    // Supports both /v1/runners/{id}/tunnel and /v1/hosts/{id}/tunnel
+    if ((url.pathname.startsWith("/v1/runners/") || url.pathname.startsWith("/v1/hosts/")) && url.pathname.endsWith("/tunnel")) {
+      const pathParts = url.pathname.split("/");
+      const runnerId = pathParts[3];
       const doId = env.TUNNEL.idFromName(runnerId);
       const stub = env.TUNNEL.get(doId);
-      // Forward to DO with runner_id in URL
-      const doUrl = new URL(request.url);
-      doUrl.pathname = "/ws";
-      doUrl.searchParams.set("runner_id", runnerId);
-      return stub.fetch(new Request(doUrl.toString(), request));
+      // Forward to DO - pass the request as-is, the DO will handle the path
+      return stub.fetch(request);
     }
 
     const response = await router.handle(request, env, ctx);

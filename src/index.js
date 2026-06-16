@@ -299,22 +299,50 @@ class Router {
   }
 
   addRoute(method, path, handler) {
-    this.routes.push({
-      pattern: new URLPattern({ pathname: path }),
-      method,
-      handler,
-    });
+    this.routes.push({ method, path, handler });
   }
 
   async handle(req, env, ctx) {
     const url = new URL(req.url);
+    const pathname = url.pathname;
 
     for (const route of this.routes) {
       if (route.method !== req.method && route.method !== "*") continue;
 
-      const match = route.pattern.exec(url);
+      // Simple path matching
+      if (route.path === pathname) {
+        req.params = {};
+        try {
+          return await route.handler(req, env, ctx);
+        } catch (e) {
+          console.error(`Route error: ${e}`);
+          return new Response(
+            JSON.stringify({ error: "Internal server error" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Pattern matching for {id} routes
+      const routeParts = route.path.split("/");
+      const pathParts = pathname.split("/");
+
+      if (routeParts.length !== pathParts.length) continue;
+
+      let match = true;
+      const params = {};
+
+      for (let i = 0; i < routeParts.length; i++) {
+        if (routeParts[i].startsWith("{") && routeParts[i].endsWith("}")) {
+          params[routeParts[i].slice(1, -1)] = pathParts[i];
+        } else if (routeParts[i] !== pathParts[i]) {
+          match = false;
+          break;
+        }
+      }
+
       if (match) {
-        req.params = match.pathname.groups;
+        req.params = params;
         try {
           return await route.handler(req, env, ctx);
         } catch (e) {
@@ -624,15 +652,13 @@ function buildRouter() {
   router.addRoute("GET", "/v1/agents", listAgentsHandler);
   router.addRoute("GET", "/v1/agents/{id}", getAgentHandler);
 
-  // Sessions
-  router.addRoute("POST", "/v1/sessions", createSessionHandler);
-  router.addRoute("GET", "/v1/sessions", listSessionsHandler);
+  // Sessions - detail routes BEFORE list routes
   router.addRoute("GET", "/v1/sessions/{id}", getSessionHandler);
   router.addRoute("DELETE", "/v1/sessions/{id}", deleteSessionHandler);
-
-  // Messages
   router.addRoute("POST", "/v1/sessions/{id}/messages", postMessageHandler);
   router.addRoute("GET", "/v1/sessions/{id}/messages", listMessagesHandler);
+  router.addRoute("POST", "/v1/sessions", createSessionHandler);
+  router.addRoute("GET", "/v1/sessions", listSessionsHandler);
 
   // Runners
   router.addRoute("GET", "/v1/runners", listRunnersHandler);

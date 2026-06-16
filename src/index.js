@@ -150,17 +150,30 @@ export class Tunnel {
 
         if (frame.kind === "hello") {
           this.hello = frame;
-          // Store runner in D1
-          await this.env.DB.prepare(
-            `INSERT OR REPLACE INTO runner_tunnels 
-             (runner_id, owner, status, connected_at, harnesses, version)
-             VALUES (?, ?, 'connected', datetime('now'), ?, ?)`
-          ).bind(
-            this.runnerId,
-            this.owner,
-            JSON.stringify(frame.harnesses),
-            frame.runner_version
-          ).run();
+          // Store runner state in DO storage
+          await this.state.storage.put("runner", {
+            runner_id: this.runnerId,
+            owner: this.owner,
+            harnesses: frame.harnesses,
+            version: frame.runner_version,
+            connected_at: this.connectedAt,
+          });
+
+          // Auto-register host in D1 if not exists
+          if (this.env.DB) {
+            const now = new Date().toISOString();
+            await this.env.DB.prepare(
+              `INSERT OR IGNORE INTO hosts (id, name, status, last_seen, capabilities, created_at, updated_at)
+               VALUES (?, ?, 'online', ?, ?, ?, ?)`
+            ).bind(
+              this.runnerId,
+              this.runnerId,
+              now,
+              JSON.stringify(frame.harnesses),
+              now,
+              now
+            ).run().catch(e => console.log(`Host register error: ${e}`));
+          }
 
           console.log(`Runner connected: ${this.runnerId} (${frame.harnesses.join(", ")})`);
         }
@@ -262,16 +275,15 @@ export class Tunnel {
 
   cleanup() {
     if (this.runnerId) {
-      // Mark runner as offline in D1
-      this.env.DB.prepare(
-        `UPDATE runner_tunnels SET status = 'disconnected', disconnected_at = datetime('now')
-         WHERE runner_id = ?`
-      ).bind(this.runnerId).run().catch(() => {});
+      // Mark runner as offline in storage
+      this.state.storage.delete("runner").catch(() => {});
 
       // Update sessions using this runner
-      this.env.DB.prepare(
-        `UPDATE conversations SET runner_id = NULL WHERE runner_id = ?`
-      ).bind(this.runnerId).run().catch(() => {});
+      if (this.env.DB) {
+        this.env.DB.prepare(
+          `UPDATE conversations SET runner_id = NULL WHERE runner_id = ?`
+        ).bind(this.runnerId).run().catch(() => {});
+      }
     }
     this.ws = null;
     this.runnerId = null;
@@ -505,23 +517,23 @@ async function listMessagesHandler(req, env) {
 
 // Runners
 async function listRunnersHandler(req, env) {
-  const runners = await env.DB.prepare(
-    "SELECT * FROM runner_tunnels WHERE status = 'connected' ORDER BY connected_at DESC"
-  ).all();
-
-  // Also check Durable Objects for live status
+  // Get runners from the hosts table (registered hosts)
+  const hosts = await env.DB.prepare("SELECT * FROM hosts").all();
   const liveRunners = [];
-  for (const runner of runners.results) {
+
+  for (const host of hosts.results) {
     try {
-      const doId = env.TUNNEL.idFromName(runner.runner_id);
+      const doId = env.TUNNEL.idFromName(host.id);
       const stub = env.TUNNEL.get(doId);
       const status = await stub.fetch(new Request("http://internal/status"));
       const data = await status.json();
       if (data.online) {
         liveRunners.push({
-          ...runner,
-          harnesses: JSON.parse(runner.harnesses || "[]"),
+          runner_id: host.id,
+          name: host.name,
           online: true,
+          harnesses: data.hello?.harnesses || [],
+          connected_at: data.connected_at,
         });
       }
     } catch {

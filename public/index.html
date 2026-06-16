@@ -295,7 +295,7 @@
       }
       
       el.innerHTML = sessions.map(s => `
-        <div class="session-item ${currentSession?.id === s.id ? 'active' : ''}" onclick="openSession('${s.id}')">
+        <div class="session-item ${currentSession?.id === s.id ? 'active' : ''}" data-id="${s.id}" onclick="openSession(this.dataset.id)">
           <div class="session-title">${s.title || s.id}</div>
           <div class="session-meta">
             <span>${s.agent_name || s.agent_id}</span>

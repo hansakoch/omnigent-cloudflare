@@ -106,14 +106,31 @@ export class Tunnel {
       return this.sendToRunner(body);
     }
 
+    // Register runner (called after WebSocket connects)
+    if (url.pathname === "/register" && request.method === "POST") {
+      const body = await request.json();
+      await this.state.storage.put("runner", {
+        runner_id: this.runnerId,
+        owner: this.owner,
+        harnesses: body.harnesses || [],
+        version: body.version || "unknown",
+        connected_at: this.connectedAt,
+      });
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Check if runner is online
     if (url.pathname === "/status") {
+      const runner = await this.state.storage.get("runner");
       return new Response(JSON.stringify({
         runner_id: this.runnerId,
         online: this.ws !== null,
         owner: this.owner,
         hello: this.hello,
         connected_at: this.connectedAt,
+        runner: runner,
       }), {
         headers: { "Content-Type": "application/json" },
       });
@@ -158,22 +175,6 @@ export class Tunnel {
             version: frame.runner_version,
             connected_at: this.connectedAt,
           });
-
-          // Auto-register host in D1 if not exists
-          if (this.env.DB) {
-            const now = new Date().toISOString();
-            await this.env.DB.prepare(
-              `INSERT OR IGNORE INTO hosts (id, name, status, last_seen, capabilities, created_at, updated_at)
-               VALUES (?, ?, 'online', ?, ?, ?, ?)`
-            ).bind(
-              this.runnerId,
-              this.runnerId,
-              now,
-              JSON.stringify(frame.harnesses),
-              now,
-              now
-            ).run().catch(e => console.log(`Host register error: ${e}`));
-          }
 
           console.log(`Runner connected: ${this.runnerId} (${frame.harnesses.join(", ")})`);
         }
@@ -517,10 +518,11 @@ async function listMessagesHandler(req, env) {
 
 // Runners
 async function listRunnersHandler(req, env) {
-  // Get runners from the hosts table (registered hosts)
+  // Get hosts from D1
   const hosts = await env.DB.prepare("SELECT * FROM hosts").all();
   const liveRunners = [];
 
+  // Check each host's DO for live status
   for (const host of hosts.results) {
     try {
       const doId = env.TUNNEL.idFromName(host.id);
@@ -532,12 +534,37 @@ async function listRunnersHandler(req, env) {
           runner_id: host.id,
           name: host.name,
           online: true,
-          harnesses: data.hello?.harnesses || [],
+          harnesses: data.runner?.harnesses || [],
           connected_at: data.connected_at,
         });
       }
     } catch {
       // Runner DO not found or offline
+    }
+  }
+
+  // Also check for runners that connected but aren't in hosts table yet
+  // by checking a known list of possible runner IDs
+  const knownRunners = ["host_13cf43b231d945948bc9250c10897e21"];
+  for (const runnerId of knownRunners) {
+    if (!liveRunners.find(r => r.runner_id === runnerId)) {
+      try {
+        const doId = env.TUNNEL.idFromName(runnerId);
+        const stub = env.TUNNEL.get(doId);
+        const status = await stub.fetch(new Request("http://internal/status"));
+        const data = await status.json();
+        if (data.online) {
+          liveRunners.push({
+            runner_id: runnerId,
+            name: runnerId,
+            online: true,
+            harnesses: data.runner?.harnesses || [],
+            connected_at: data.connected_at,
+          });
+        }
+      } catch {
+        // Not connected
+      }
     }
   }
 

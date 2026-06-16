@@ -543,8 +543,9 @@ async function postMessageHandler(req, env) {
     try {
       const doId = env.TUNNEL.idFromName(runnerId);
       const stub = env.TUNNEL.get(doId);
-      // Send message to runner for processing
-      await stub.fetch(new Request("http://internal/send", {
+      
+      // Send message to runner and get response
+      const response = await stub.fetch(new Request("http://internal/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -553,6 +554,17 @@ async function postMessageHandler(req, env) {
           body: { content: body.content, role: body.role },
         }),
       }));
+      
+      const runnerResponse = await response.json();
+      
+      // If runner responded, add its response to the conversation
+      if (runnerResponse?.body) {
+        const responseId = `item_${crypto.randomUUID().slice(0, 12)}`;
+        await env.DB.prepare(
+          `INSERT INTO conversation_items (id, conversation_id, role, content, created_at)
+           VALUES (?, ?, 'assistant', ?, datetime('now'))`
+        ).bind(responseId, req.params.id, runnerResponse.body).run();
+      }
     } catch (e) {
       console.log(`Could not dispatch to runner: ${e}`);
     }

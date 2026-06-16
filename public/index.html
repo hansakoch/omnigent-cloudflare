@@ -297,11 +297,16 @@
       }
       
       el.innerHTML = sessions.map(s => `
-        <div class="session-item ${currentSession?.id === s.id ? 'active' : ''}" data-id="${s.id}" onclick="openSession(this.dataset.id)">
-          <div class="session-title">${s.title || s.id}</div>
-          <div class="session-meta">
-            <span>${s.agent_name || s.agent_id}</span>
-            <span>${s.runner_id ? '⚡ runner' : '⏳ queued'}</span>
+        <div class="session-item ${currentSession?.id === s.id ? 'active' : ''}" data-id="${s.id}">
+          <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div style="flex: 1; cursor: pointer;" onclick="openSession(this.parentElement.parentElement.dataset.id)">
+              <div class="session-title">${s.title || s.id}</div>
+              <div class="session-meta">
+                <span>${s.agent_name || s.agent_id}</span>
+                <span>${s.runner_id ? '⚡ runner' : '⏳ queued'}</span>
+              </div>
+            </div>
+            <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; margin-left: 4px;" onclick="event.stopPropagation(); deleteSession('${s.id}')">✕</button>
           </div>
         </div>
       `).join('');
@@ -377,6 +382,21 @@
       
       await refresh();
       openSession(currentSession.id);
+    }
+
+    async function deleteSession(id) {
+      if (!confirm('Delete this session?')) return;
+      
+      await api(`/v1/sessions/${id}`, { method: 'DELETE' });
+      
+      if (currentSession?.id === id) {
+        currentSession = null;
+        document.getElementById('chat-header').style.display = 'none';
+        document.getElementById('chat-input').style.display = 'none';
+        document.getElementById('messages').innerHTML = '<div class="empty"><div class="empty-icon">&#128172;</div>Select a session to start chatting</div>';
+      }
+      
+      await refresh();
     }
 
     async function openSession(id) {

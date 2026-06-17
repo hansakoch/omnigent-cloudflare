@@ -1,0 +1,45 @@
+{
+  "name": "omnigent-cloudflare",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+
+  "// Custom Domain": "Uncomment after adding DNS CNAME record",
+  // "routes": [
+  //   { "pattern": "buildx.yourdomain.com/*", "zone_name": "yourdomain.com" }
+  // ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "omnigent-db",
+      "database_id": "YOUR_DATABASE_ID_HERE"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "OMNIGENT_SESSION",
+        "class_name": "OmnigentSession"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["OmnigentSession"]
+    }
+  ],
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  "vars": {
+    "SERVER_URL": "https://omnigent-cloudflare.YOUR_SUBDOMAIN.workers.dev"
+  }
+}

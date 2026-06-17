@@ -21,7 +21,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hansakoch/omnigent-cloudflare.git"
+    "url": "git+https://github.com/hansakoch/omnigent-cloudflare.git"
   },
   "bugs": {
     "url": "https://github.com/hansakoch/omnigent-cloudflare/issues"
@@ -29,5 +29,28 @@
   "homepage": "https://github.com/hansakoch/omnigent-cloudflare#readme",
   "devDependencies": {
     "wrangler": "^4.100.0"
-  }
+  },
+  "dependencies": {
+    "@cloudflare/agents": "^0.0.16",
+    "agents": "^0.16.1",
+    "blake3-wasm": "^2.1.5",
+    "cookie": "^1.1.1",
+    "detect-libc": "^2.1.2",
+    "error-stack-parser-es": "^1.0.5",
+    "esbuild": "^0.27.3",
+    "kleur": "^4.1.5",
+    "miniflare": "^4.20260611.0",
+    "path-to-regexp": "^6.3.0",
+    "pathe": "^2.0.3",
+    "semver": "^7.8.4",
+    "sharp": "^0.34.5",
+    "supports-color": "^10.2.2",
+    "undici": "^7.24.8",
+    "unenv": "^2.0.0-rc.24",
+    "workerd": "^1.20260611.1",
+    "ws": "^8.20.1",
+    "youch": "^4.1.0-beta.10",
+    "youch-core": "^0.3.3"
+  },
+  "type": "commonjs"
 }

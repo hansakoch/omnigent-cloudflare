@@ -12,7 +12,7 @@
       color: #e0e0e0;
       min-height: 100vh;
     }
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
     header {
       display: flex;
       justify-content: space-between;
@@ -22,7 +22,6 @@
       margin-bottom: 20px;
     }
     h1 { font-size: 20px; color: #fff; }
-    .header-actions { display: flex; gap: 8px; }
     .btn {
       padding: 8px 16px;
       border-radius: 6px;
@@ -35,11 +34,11 @@
     .btn-primary:hover { background: #2563eb; }
     .btn-secondary { background: #333; color: white; }
     .btn-secondary:hover { background: #444; }
-    .btn-success { background: #059669; color: white; }
-    .btn-success:hover { background: #047857; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
 
-    .layout { display: grid; grid-template-columns: 280px 1fr 280px; gap: 16px; height: calc(100vh - 100px); }
-    @media (max-width: 1024px) { .layout { grid-template-columns: 1fr; height: auto; } }
+    .layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; height: calc(100vh - 100px); }
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; height: auto; } }
 
     .panel {
       background: #111;
@@ -60,25 +59,22 @@
       justify-content: space-between;
       align-items: center;
     }
-    .panel-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 8px;
-    }
+    .panel-content { flex: 1; overflow-y: auto; padding: 8px; }
 
-    .session-item, .runner-item {
+    .session-item {
       padding: 10px 12px;
       border-radius: 6px;
       cursor: pointer;
       margin-bottom: 4px;
       transition: background 0.1s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .session-item:hover, .runner-item:hover { background: #1a1a1a; }
+    .session-item:hover { background: #1a1a1a; }
     .session-item.active { background: #1e3a5f; }
-    .session-title { font-size: 14px; margin-bottom: 2px; }
-    .session-meta { font-size: 11px; color: #666; display: flex; gap: 8px; }
-    .runner-name { font-size: 13px; margin-bottom: 2px; }
-    .runner-harnesses { font-size: 11px; color: #666; }
+    .session-title { font-size: 14px; flex: 1; }
+    .session-meta { font-size: 11px; color: #666; margin-top: 2px; }
 
     .chat-panel { display: flex; flex-direction: column; }
     .chat-header {
@@ -89,11 +85,7 @@
       align-items: center;
     }
     .chat-header h2 { font-size: 15px; }
-    .chat-messages {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
-    }
+    .chat-messages { flex: 1; padding: 16px; overflow-y: auto; }
     .message {
       padding: 10px 14px;
       margin-bottom: 8px;
@@ -104,7 +96,6 @@
     }
     .message-user { background: #1e3a5f; margin-left: auto; }
     .message-assistant { background: #1a1a1a; border: 1px solid #222; }
-    .message-system { background: #1a1a2e; border: 1px solid #333; font-size: 12px; color: #888; text-align: center; }
     .chat-input {
       display: flex;
       gap: 8px;
@@ -113,12 +104,7 @@
     }
     .chat-input input { flex: 1; }
 
-    .status-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 6px;
-    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .status-online { background: #22c55e; }
     .status-offline { background: #ef4444; }
 
@@ -153,39 +139,19 @@
     }
 
     .empty { color: #666; text-align: center; padding: 40px 20px; font-size: 13px; }
-    .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
-
-    input[type="text"], input[type="password"] {
-      background: #1a1a1a;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 8px 12px;
-      color: white;
-      font-size: 14px;
-    }
-    input:focus { outline: none; border-color: #3b82f6; }
-
-    .agent-badge {
-      font-size: 10px;
-      padding: 2px 6px;
-      background: #222;
-      border-radius: 4px;
-      color: #888;
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>Omnigent Cloud</h1>
-      <div class="header-actions">
+      <div>
         <button class="btn btn-secondary" onclick="refresh()">Refresh</button>
         <button class="btn btn-primary" onclick="showNewSession()">New Session</button>
       </div>
     </header>
 
     <div class="layout">
-      <!-- Sessions Panel -->
       <div class="panel">
         <div class="panel-header">
           <span>Sessions</span>
@@ -196,62 +162,28 @@
         </div>
       </div>
 
-      <!-- Chat Panel -->
       <div class="panel chat-panel">
         <div class="chat-header" id="chat-header" style="display: none;">
-          <div>
-            <h2 id="chat-title">Session</h2>
-            <span class="agent-badge" id="chat-agent"></span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <select id="assign-runner-select" onchange="assignRunner(this.value)" style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 4px 8px; color: white; font-size: 12px;">
-              <option value="">No runner</option>
-            </select>
-            <span class="status-dot" id="runner-dot"></span>
-          </div>
+          <h2 id="chat-title">Session</h2>
+          <button class="btn btn-danger" style="font-size: 11px; padding: 4px 8px;" onclick="deleteCurrentSession()">Delete</button>
         </div>
         <div class="chat-messages" id="messages">
-          <div class="empty">
-            <div class="empty-icon">&#128172;</div>
-            Select a session to start chatting
-          </div>
+          <div class="empty">Select a session to start chatting</div>
         </div>
         <div class="chat-input" id="chat-input" style="display: none;">
           <input type="text" id="message-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessage()">
           <button class="btn btn-primary" onclick="sendMessage()">Send</button>
         </div>
       </div>
-
-      <!-- Runners Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <span>Runners</span>
-          <span id="runner-count">0</span>
-        </div>
-        <div class="panel-content" id="runners-list">
-          <div class="empty">No runners connected</div>
-        </div>
-      </div>
     </div>
   </div>
 
-  <!-- New Session Modal -->
   <div class="modal" id="new-session-modal">
     <div class="modal-content">
       <h2 style="margin-bottom: 16px; font-size: 16px;">New Session</h2>
       <div class="form-group">
-        <label>Agent</label>
-        <select id="agent-select"></select>
-      </div>
-      <div class="form-group">
-        <label>Title (optional)</label>
+        <label>Title</label>
         <input type="text" id="session-title" placeholder="My session">
-      </div>
-      <div class="form-group">
-        <label>Assign Runner (optional)</label>
-        <select id="runner-select">
-          <option value="">None (auto-assign)</option>
-        </select>
       </div>
       <div style="display: flex; gap: 8px; justify-content: flex-end;">
         <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -263,9 +195,12 @@
   <script>
     const API = window.location.origin;
     let currentSession = null;
-    let sessions = [];
-    let agents = [];
-    let runners = [];
+    let ws = null;
+
+    // Agent SDK uses /agents/omnigent/:session_id pattern
+    function getAgentUrl(sessionId) {
+      return `${API}/agents/omnigent/${sessionId}`;
+    }
 
     async function api(path, opts = {}) {
       const res = await fetch(`${API}${path}`, {
@@ -276,18 +211,12 @@
     }
 
     async function refresh() {
-      [sessions, agents, runners] = await Promise.all([
-        api('/v1/sessions'),
-        api('/v1/agents'),
-        api('/v1/runners'),
-      ]);
-      renderSessions();
-      renderRunners();
-      renderAgentOptions();
-      renderRunnerOptions();
+      // List sessions from D1
+      const data = await api('/api/sessions');
+      renderSessions(data.data || []);
     }
 
-    function renderSessions() {
+    function renderSessions(sessions) {
       const el = document.getElementById('sessions-list');
       document.getElementById('session-count').textContent = sessions.length;
       
@@ -297,52 +226,14 @@
       }
       
       el.innerHTML = sessions.map(s => `
-        <div class="session-item ${currentSession?.id === s.id ? 'active' : ''}" data-id="${s.id}">
-          <div style="display: flex; justify-content: space-between; align-items: start;">
-            <div style="flex: 1; cursor: pointer;" onclick="openSession(this.parentElement.parentElement.dataset.id)">
-              <div class="session-title">${s.title || s.id}</div>
-              <div class="session-meta">
-                <span>${s.agent_name || s.agent_id}</span>
-                <span>${s.runner_id ? '⚡ runner' : '⏳ queued'}</span>
-              </div>
-            </div>
-            <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; margin-left: 4px;" onclick="event.stopPropagation(); deleteSession('${s.id}')">✕</button>
+        <div class="session-item ${currentSession?.id === s.id ? 'active' : ''}" onclick="openSession('${s.id}')">
+          <div>
+            <div class="session-title">${s.title || s.id}</div>
+            <div class="session-meta">${s.status}</div>
           </div>
+          <button class="btn btn-danger" style="font-size: 10px; padding: 2px 6px;" onclick="event.stopPropagation(); deleteSession('${s.id}')">✕</button>
         </div>
       `).join('');
-    }
-
-    function renderRunners() {
-      const el = document.getElementById('runners-list');
-      document.getElementById('runner-count').textContent = runners.length;
-      
-      if (!runners.length) {
-        el.innerHTML = '<div class="empty">No runners connected<br><br>Connect a runner:<br><code style="font-size:11px; color:#666;">omnigent host --server ' + window.location.origin + '</code></div>';
-        return;
-      }
-      
-      el.innerHTML = runners.map(r => `
-        <div class="runner-item">
-          <div class="runner-name">
-            <span class="status-dot status-online"></span>
-            ${r.runner_id}
-          </div>
-          <div class="runner-harnesses">
-            ${(r.harnesses || []).join(', ') || 'unknown'}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderAgentOptions() {
-      const el = document.getElementById('agent-select');
-      el.innerHTML = agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-    }
-
-    function renderRunnerOptions() {
-      const el = document.getElementById('runner-select');
-      el.innerHTML = '<option value="">None (auto-assign)</option>' + 
-        runners.map(r => `<option value="${r.runner_id}">${r.runner_id}</option>`).join('');
     }
 
     function showNewSession() {
@@ -354,79 +245,62 @@
     }
 
     async function createSession() {
-      const agentId = document.getElementById('agent-select').value;
-      const title = document.getElementById('session-title').value;
-      const runnerId = document.getElementById('runner-select').value;
-
-      const body = { agent_id: agentId, title };
-      if (runnerId) body.runner_id = runnerId;
-
-      const session = await api('/v1/sessions', {
+      const title = document.getElementById('session-title').value || 'New Session';
+      const sessionId = `session-${crypto.randomUUID().slice(0, 8)}`;
+      
+      // Create session via API
+      await api('/api/sessions', {
         method: 'POST',
-        body: JSON.stringify(body),
+        body: JSON.stringify({ id: sessionId, title }),
       });
-
+      
       closeModal();
       document.getElementById('session-title').value = '';
       await refresh();
-      openSession(session.id);
-    }
-
-    async function assignRunner(runnerId) {
-      if (!currentSession) return;
-      
-      await api(`/v1/sessions/${currentSession.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ runner_id: runnerId || null }),
-      });
-      
-      await refresh();
-      openSession(currentSession.id);
-    }
-
-    async function deleteSession(id) {
-      if (!confirm('Delete this session?')) return;
-      
-      await api(`/v1/sessions/${id}`, { method: 'DELETE' });
-      
-      if (currentSession?.id === id) {
-        currentSession = null;
-        document.getElementById('chat-header').style.display = 'none';
-        document.getElementById('chat-input').style.display = 'none';
-        document.getElementById('messages').innerHTML = '<div class="empty"><div class="empty-icon">&#128172;</div>Select a session to start chatting</div>';
-      }
-      
-      await refresh();
+      openSession(sessionId);
     }
 
     async function openSession(id) {
-      currentSession = await api(`/v1/sessions/${id}`);
+      // Close existing WebSocket
+      if (ws) ws.close();
+      
+      currentSession = { id };
       
       document.getElementById('chat-header').style.display = 'flex';
       document.getElementById('chat-input').style.display = 'flex';
+      document.getElementById('chat-title').textContent = id;
       
-      document.getElementById('chat-title').textContent = currentSession.title || currentSession.id;
-      const agent = agents.find(a => a.id === currentSession.agent_id);
-      document.getElementById('chat-agent').textContent = agent ? agent.name : currentSession.agent_id;
+      // Connect via WebSocket to Agent
+      const agentUrl = getAgentUrl(id);
+      ws = new WebSocket(agentUrl.replace('http', 'ws'));
       
-      // Populate runner dropdown
-      const runnerSelect = document.getElementById('assign-runner-select');
-      runnerSelect.innerHTML = '<option value="">No runner</option>' + 
-        runners.map(r => `<option value="${r.runner_id}" ${currentSession.runner_id === r.runner_id ? 'selected' : ''}>${r.runner_id}</option>`).join('');
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'state') {
+          document.getElementById('chat-title').textContent = data.title || id;
+        }
+        
+        if (data.type === 'history') {
+          renderMessages(data.messages || []);
+        }
+        
+        if (data.type === 'message') {
+          appendMessage(data);
+        }
+      };
       
-      // Update runner status
-      const runner = runners.find(r => r.runner_id === currentSession.runner_id);
-      document.getElementById('runner-dot').className = 'status-dot ' + (runner ? 'status-online' : 'status-offline');
+      ws.onclose = () => {
+        console.log('WebSocket closed');
+      };
       
-      const messages = await api(`/v1/sessions/${id}/messages`);
-      renderMessages(messages);
-      renderSessions();
+      renderSessions(await (await api('/api/sessions')).data || []);
     }
 
     function renderMessages(messages) {
       const el = document.getElementById('messages');
       if (!messages.length) {
-        el.innerHTML = '<div class="message message-system">No messages yet. Type below to start.</div>';
+        el.innerHTML = '<div class="empty">No messages yet</div>';
         return;
       }
       el.innerHTML = messages.map(m => `
@@ -435,24 +309,45 @@
       el.scrollTop = el.scrollHeight;
     }
 
+    function appendMessage(msg) {
+      const el = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = `message message-${msg.role}`;
+      div.textContent = msg.content;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
     async function sendMessage() {
       const input = document.getElementById('message-input');
       const content = input.value.trim();
-      if (!content || !currentSession) return;
-
+      if (!content || !ws) return;
+      
       input.value = '';
+      
+      // Send via WebSocket
+      ws.send(JSON.stringify({
+        type: 'message',
+        role: 'user',
+        content,
+      }));
+    }
 
-      const messagesEl = document.getElementById('messages');
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'message message-user';
-      msgDiv.textContent = content;
-      messagesEl.appendChild(msgDiv);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+    async function deleteSession(id) {
+      if (!confirm('Delete this session?')) return;
+      await api(`/api/sessions/${id}`, { method: 'DELETE' });
+      if (currentSession?.id === id) {
+        currentSession = null;
+        if (ws) ws.close();
+        document.getElementById('chat-header').style.display = 'none';
+        document.getElementById('chat-input').style.display = 'none';
+        document.getElementById('messages').innerHTML = '<div class="empty">Select a session to start chatting</div>';
+      }
+      await refresh();
+    }
 
-      await api(`/v1/sessions/${currentSession.id}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({ content, role: 'user' }),
-      });
+    async function deleteCurrentSession() {
+      if (currentSession) await deleteSession(currentSession.id);
     }
 
     function escapeHtml(str) {
@@ -460,15 +355,6 @@
       div.textContent = str;
       return div.innerHTML;
     }
-
-    // Auto-refresh runners every 5 seconds
-    setInterval(async () => {
-      try {
-        runners = await api('/v1/runners');
-        renderRunners();
-        renderRunnerOptions();
-      } catch {}
-    }, 5000);
 
     refresh();
   </script>

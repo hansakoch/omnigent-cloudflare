@@ -386,7 +386,10 @@ async function healthHandler(req, env) {
 // Agents
 async function listAgentsHandler(_req, env) {
   const agents = await env.DB.prepare("SELECT * FROM agents ORDER BY name").all();
-  return new Response(JSON.stringify(agents.results), {
+  return new Response(JSON.stringify({
+    object: "list",
+    data: agents.results,
+  }), {
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -435,7 +438,13 @@ async function listSessionsHandler(req, env) {
      ORDER BY c.updated_at DESC LIMIT ? OFFSET ?`
   ).bind(limit, offset).all();
 
-  return new Response(JSON.stringify(sessions.results), {
+  return new Response(JSON.stringify({
+    object: "list",
+    data: sessions.results,
+    first_id: sessions.results[0]?.id || null,
+    last_id: sessions.results[sessions.results.length - 1]?.id || null,
+    has_more: sessions.results.length >= limit,
+  }), {
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -649,7 +658,10 @@ async function listRunnersHandler(req, env) {
     }
   }
 
-  return new Response(JSON.stringify(liveRunners), {
+  return new Response(JSON.stringify({
+    object: "list",
+    data: liveRunners,
+  }), {
     headers: { "Content-Type": "application/json" },
   });
 }
